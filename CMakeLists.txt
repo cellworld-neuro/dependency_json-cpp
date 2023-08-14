@@ -39,7 +39,7 @@ set (json_cpp_core_files
 include_directories(include)
 
 install_git_dependency( Catch
-        https://github.com/germanespinosa/catch
+        https://github.com/cellworld-neuro/dependency_catch
         ADD_SUBDIRECTORY)
 
 if (NOT ${BUILD_PYTHON_MODULE_ONLY})
@@ -104,37 +104,3 @@ if (NOT ${BUILD_PYTHON_MODULE_ONLY})
         export(TARGETS json-cpp FILE Json-cppConfig.cmake)
     endif()
 endif()
-
-#if (NOT ${BUILD_AS_DEPENDENCY})
-#    install_git_dependency( Pybind11
-#            https://github.com/pybind/pybind11
-#            ADD_SUBDIRECTORY
-#            INCLUDE_DIRECTORIES
-#            include )
-#
-#    set(json_cpp_module_files
-#            src/python/json_descriptor.cpp
-#            ${json_cpp_core_files})
-#
-#    pybind11_add_module(core src/python/json_python.cpp ${json_cpp_module_files})
-#
-#    target_compile_options(core PRIVATE -Wextra -pedantic -Wall -static)
-#
-#    string(TOLOWER ${CMAKE_BUILD_TYPE} LBT)
-#
-#    add_custom_command(TARGET core POST_BUILD
-#            COMMAND "${CMAKE_COMMAND}" -E copy
-#            "$<TARGET_FILE:core>"
-#            "${CMAKE_CURRENT_SOURCE_DIR}/python/json-cpp2/build-${LBT}/$<TARGET_FILE_NAME:core>"
-#            COMMENT "core output copied to ${CMAKE_CURRENT_SOURCE_DIR}/python/json-cpp2/build-${LBT}")
-#
-#    ###
-#    ### TESTS
-#    ###
-#
-#    add_catch_test( python_module_tests
-#            TEST_FILES
-#            src/python/json_python_tests.cpp
-#            SOURCE_FILES ${json_cpp_module_files}
-#            INCLUDE_DIRECTORIES include)
-#endif()
