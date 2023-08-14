@@ -50,7 +50,7 @@ if (NOT ${BUILD_PYTHON_MODULE_ONLY})
             )
 
     install_git_dependency( Date
-            https://github.com/HowardHinnant/date
+            https://github.com/cellworld-neuro/dependency_date
             INCLUDE_DIRECTORIES include )
 
     add_library(json-cpp ${json_cpp_files})
