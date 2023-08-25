@@ -256,6 +256,9 @@ class JsonList(list):
     def __repr__(self):
         return str(self)
 
+    def __reversed__(self):
+        return self[::-1]
+
     def get(self, m):
         l = JsonList()
         for i in self:
