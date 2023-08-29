@@ -256,9 +256,6 @@ class JsonList(list):
     def __repr__(self):
         return str(self)
 
-    def __reversed__(self):
-        return self[::-1]
-
     def get(self, m):
         l = JsonList()
         for i in self:
@@ -306,7 +303,9 @@ class JsonList(list):
         it = new_list.list_type
         ic = it().__class__
         for i in json_list:
-            if issubclass(ic, JsonObject):
+            if i is None:
+                new_list.append(i)
+            elif issubclass(ic, JsonObject):
                 new_list.append(it.parse(json_dictionary=i))
             elif issubclass(ic, JsonList):
                 new_list.append(it.parse(json_list=i))
