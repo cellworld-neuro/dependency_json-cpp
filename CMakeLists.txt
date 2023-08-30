@@ -39,7 +39,7 @@ set (json_cpp_core_files
 include_directories(include)
 
 install_git_dependency( Catch
-        https://github.com/cellworld-neuro/dependency_catch
+        https://github.com/cellworld/dependency_catch
         ADD_SUBDIRECTORY)
 
 if (NOT ${BUILD_PYTHON_MODULE_ONLY})
@@ -50,7 +50,7 @@ if (NOT ${BUILD_PYTHON_MODULE_ONLY})
             )
 
     install_git_dependency( Date
-            https://github.com/cellworld-neuro/dependency_date
+            https://github.com/cellworld/dependency_date
             INCLUDE_DIRECTORIES include )
 
     add_library(json-cpp ${json_cpp_files})
