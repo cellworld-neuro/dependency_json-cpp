@@ -216,13 +216,13 @@ class JsonList(list):
 
     def __add__(self, other):
         iterable = [item for item in self] + [item for item in other]
-        return JsonList(iterable, self.list_type)
+        return JsonList(list_type=self.list_type, iterable=iterable)
 
     def __radd__(self, other):
         iterable = [item for item in other] + [item for item in self]
         if isinstance(other, JsonList):
             return self.__class__(iterable, other.list_type)
-        return JsonList(iterable, self.list_type)
+        return JsonList(list_type=self.list_type, iterable=iterable)
 
     def __setitem__(self, key, value):
         itervalue = (value,)
