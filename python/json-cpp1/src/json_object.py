@@ -1,5 +1,5 @@
 import json
-from .util import check_type, unique_string
+from .util import check_type
 from datetime import datetime
 import requests
 from os import path
@@ -41,22 +41,55 @@ class JsonObject:
 
     def __str__(self):
         s = ""
-        v = vars(self)
-        for k in v:
+        for k in self.get_members():
             if k[0] == "_":
                 continue
             if s:
                 s += ","
             s += "\"%s\":" % k
-            if isinstance(v[k], str):
-                s += "%s" % json.dumps(v[k])
-            elif isinstance(v[k], datetime):
-                s += "\"%s\"" % v[k].strftime(JsonDate.date_format)
-            elif isinstance(v[k], bool):
-                s += "%s" % str(v[k]).lower()
+            i = self[k]
+            if isinstance(i, str):
+                s += "%s" % json.dumps(i)
+            elif isinstance(i, datetime):
+                s += "\"%s\"" % i.strftime(JsonDate.date_format)
+            elif isinstance(i, bool):
+                s += "%s" % str(i).lower()
             else:
-                s += "%s" % str(v[k])
+                s += "%s" % str(i)
         return "{%s}" % s
+
+    def get_numeric_values(self):
+        values = JsonList()
+        for k in self.get_numeric_columns():
+            values.append(self[k])
+        return values
+
+    def get_values(self):
+        values = JsonList()
+        for k in self.get_columns():
+            values.append(self[k])
+        return values
+
+    def get_numeric_columns(self):
+        columns = JsonList(list_type=str)
+        for v in self.get_members():
+            if isinstance(self[v], JsonObject):
+                columns += [v + "." + c for c in self[v].get_numeric_columns()]
+            else:
+                i = self[v]
+                t = type(i)
+                if t is float or t is int or t is bool:
+                    columns.append(v)
+        return columns
+
+    def get_columns(self):
+        columns = JsonList(list_type=str)
+        for v in self.get_members():
+            if isinstance(self[v], JsonObject):
+                columns += [v + "." + c for c in self[v].get_columns()]
+            else:
+                columns.append(v)
+        return columns
 
     def __repr__(self):
         return str(self)
@@ -64,22 +97,48 @@ class JsonObject:
     def __eq__(self, other):
         if type(self) is not type(other):
             return False
-        v = vars(self)
-        vo = vars(other)
-        for k in v:
-            if k[0] == "_":
-                continue
-            if v[k] != vo[k]:
+        for k in self.get_members():
+            if self[k] != other[k]:
                 return False
         return True
 
-    def copy(self):
-        return type(self).parse(str(self))
+    def __getitem__(self, key):
+        if "." in key:
+            parts = key.split(".")
+            new_key = ".".join(parts[1:])
+            key = parts[0]
+            return self[key][new_key]
+        else:
+            return getattr(self, key)
 
-    def format(self, format_string: str):
+    def __setitem__(self, key, value):
+        if "." in key:
+            parts = key.split(".")
+            new_key = ".".join(parts[1:])
+            key = parts[0]
+            self[key][new_key] = value
+        else:
+            setattr(self, key, value)
+
+    def __iter__(self):
+        for k in self.get_members():
+            yield k
+
+    def get_members(self):
+        members = []
         v = vars(self)
         for k in v:
-            if not isinstance(v[k], JsonObject):
+            if k[0] == "_":
+                continue
+            members.append(k)
+        return members
+
+    def copy(self):
+        return self.__class__.parse(str(self))
+
+    def format(self, format_string: str):
+        for k in self.get_members():
+            if not isinstance(self[k], JsonObject):
                 continue
             pos = format_string.find("{"+k+":")
             if pos >= 0:
@@ -94,12 +153,12 @@ class JsonObject:
                         bracket_count -= 1
                     sub_format_end += 1
                 sub_format = format_string[sub_format_start:sub_format_end-1]
-                sub_str = v[k].format(sub_format)
+                sub_str = self[k].format(sub_format)
                 format_string = format_string[:pos] + sub_str + format_string[sub_format_end:]
         return format_string.format(**vars(self))
 
     @classorinstancemethod
-    def parse(cls_or_self, json_string: str = "", json_dictionary: dict=None):
+    def parse(cls_or_self, json_string: str = "", json_dictionary: dict = None):
         if json_string:
             json_dictionary = json.loads(json_string)
 
@@ -124,12 +183,10 @@ class JsonObject:
         return new_object
 
     @staticmethod
-    def load(json_string: str = "", json_dictionary_or_list=None) -> type:
+    def load(json_string: str = "", json_dictionary_or_list=None):
         if json_string:
             check_type(json_string, str, "wrong type for json_string")
             json_dictionary_or_list = json.loads(json_string)
-        class_name = "Json_object_" + unique_string()
-        constructor_string = "def " + class_name + "__init__ (self):"
         if isinstance(json_dictionary_or_list, list):
             new_list = JsonList(list_type=None)
             for item in json_dictionary_or_list:
@@ -140,15 +197,13 @@ class JsonObject:
                 new_list.append(new_item)
             return new_list
         elif isinstance(json_dictionary_or_list, dict):
+            new_object = JsonObject()
             for key in json_dictionary_or_list.keys():
                 if isinstance(json_dictionary_or_list[key], dict) or isinstance(json_dictionary_or_list[key], list):
-                    constructor_string += "\n\tself." + key + " = self.load(json_string='" + json.dumps(json_dictionary_or_list[key]) + "')"
+                    setattr(new_object, key, JsonObject.load(json_dictionary_or_list=json_dictionary_or_list[key]))
                 else:
-                    constructor_string += "\n\tself." + key + " = " + json_dictionary_or_list[key].__repr__()
-            d = {}
-            exec(constructor_string, d)
-            new_type = type(class_name, (JsonObject, ), {"__init__": d[class_name + "__init__"]})
-            return new_type()
+                    setattr(new_object, key, json_dictionary_or_list[key])
+            return new_object
         else:
             raise TypeError("wrong type for json_dictionary_or_list")
 
@@ -221,7 +276,7 @@ class JsonList(list):
     def __radd__(self, other):
         iterable = [item for item in other] + [item for item in self]
         if isinstance(other, JsonList):
-            return self.__class__(iterable, other.list_type)
+            return self.__class__(list_type=other.list_type, iterable=iterable)
         return JsonList(list_type=self.list_type, iterable=iterable)
 
     def __setitem__(self, key, value):
@@ -263,19 +318,33 @@ class JsonList(list):
                 l.append(vars(i)[m])
         return l
 
-    def where(self, m, v, o="=="):
-        nl = type(self)()
+    def where(self, m: str, v, o="=="):
+        d = {}
+        if type(v) is str:
+            exec("def criteria(i): return i.%s %s '%s'" % (m, o, v), d)
+        elif isinstance(v, JsonObject):
+            exec("def criteria(i): return str(i.%s) %s '%s'" % (m, o, str(v)), d)
+        else:
+            exec("def criteria(i): return i.%s %s %s" % (m, o, str(v)), d)
+
+        return self.filter(d["criteria"])
+
+    def split_by(self, m) -> dict:
+        if type(m) is str:
+            d = {}
+            exec("def criteria(i): return i.%s" % m, d)
+            m = d["criteria"]
+        r = {}
         for i in self:
-            if type(vars(i)[m]) is str or issubclass(type(vars(i)[m]), JsonObject):
-                e = "'%s' %s '%s'" % (str(vars(i)[m]), o, str(v))
-            else:
-                e = "%s %s %s" % (str(vars(i)[m]), o, str(v))
-            if eval(e):
-                nl.append(i)
-        return nl
+            l = m(i)
+            if l not in r:
+                r[l] = self.__class__()
+                self.list_type = self.list_type
+            r[l].append(i)
+        return r
 
     def filter(self, l):
-        nl = type(self)()
+        nl = self.__class__()
         for i in self:
             if l(i):
                 nl.append(i)
@@ -288,7 +357,7 @@ class JsonList(list):
         return nl
 
     def copy(self):
-        return type(self).parse(str(self))
+        return self.__class__.parse(str(self))
 
     @classorinstancemethod
     def parse(cls_or_self, json_string="", json_list=None):
@@ -300,6 +369,7 @@ class JsonList(list):
             new_list = cls_or_self()
         else:
             new_list = cls_or_self
+            new_list.clear()
         it = new_list.list_type
         ic = it().__class__
         for i in json_list:
@@ -330,3 +400,34 @@ class JsonList(list):
         if req.status_code == 200:
             return self.parse(req.text)
         return None
+
+    def to_numpy_array(self):
+        from numpy import array
+        if self.list_type is int or self.list_type is float or self.list_type is bool:
+            return array(self)
+        if issubclass(self.list_type, JsonObject):
+            return array([i.get_numeric_values() for i in self])
+        raise "Numpy conversion can only be done on typed json lists with types float, int, bool or JsonObject"
+
+    def from_numpy_array(self, a):
+        self.clear()
+        columns = self.list_type().get_numeric_columns()
+        for row in a:
+            ni = self.list_type()
+            for i, c in enumerate(columns):
+                ni[c] = row[i]
+            self.append(ni)
+
+    def to_dataframe(self):
+        from pandas import DataFrame
+        columns = self.list_type().get_columns()
+        return DataFrame([i.get_values() for i in self], columns=columns)
+
+    def from_dataframe(self, df):
+        self.clear()
+        columns = df.columns
+        for i, row in df.iterrows():
+            ni = self.list_type()
+            for c in columns:
+                ni[c] = row[c]
+            self.append(ni)
