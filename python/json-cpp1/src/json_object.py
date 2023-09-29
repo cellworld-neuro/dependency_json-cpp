@@ -4,7 +4,6 @@ from datetime import datetime
 import requests
 from os import path
 
-
 def json_parameters_function():
     def inner(func):
         def wrapper(json_object):
@@ -166,6 +165,7 @@ class JsonObject:
             new_object = cls_or_self()
         else:
             new_object = cls_or_self
+
         for key in json_dictionary:
             member = getattr(new_object, key)
             it = type(member)
@@ -318,19 +318,20 @@ class JsonList(list):
                 l.append(vars(i)[m])
         return l
 
-    def where(self, m: str, v, o="=="):
+    def where(self, m: str, v, o: str="=="):
         d = {}
         if type(v) is str:
-            exec("def criteria(i): return i.%s %s '%s'" % (m, o, v), d)
+            criteria = "def criteria(i): return i.%s %s '%s'" % (m, o, v)
         elif isinstance(v, JsonObject):
-            exec("def criteria(i): return str(i.%s) %s '%s'" % (m, o, str(v)), d)
+            criteria = "def criteria(i): return str(i.%s) %s '%s'" % (m, o, str(v))
         else:
-            exec("def criteria(i): return i.%s %s %s" % (m, o, str(v)), d)
+            criteria = "def criteria(i): return i.%s %s %s" % (m, o, str(v))
 
+        exec(criteria, d)
         return self.filter(d["criteria"])
 
     def split_by(self, m) -> dict:
-        if type(m) is str:
+        if type(m) is str and issubclass(self.list_type, JsonObject) :
             d = {}
             exec("def criteria(i): return i.%s" % m, d)
             m = d["criteria"]
@@ -349,6 +350,25 @@ class JsonList(list):
             if l(i):
                 nl.append(i)
         return nl
+
+    def find_first(self, l):
+        return self[self.find_first_index(l)]
+
+    def find_first_index(self, l):
+        for ix, i in enumerate(self):
+            if l(i):
+                return ix
+        raise RuntimeError("Value not found")
+
+    def find_ordered(self, l, value):
+        return self[self.find_ordered_index(l, value)]
+
+    def find_ordered_index(self, l, value):
+        from bisect import bisect_left
+        i = bisect_left(self, value, key=l)
+        if i < 0 or i >= len(self) or l(self[i]) != value:
+            raise RuntimeError("Value %s not found" % str(value))
+        return i
 
     def process(self, l):
         nl = JsonList()
@@ -405,13 +425,11 @@ class JsonList(list):
         from numpy import array
         if self.list_type is int or self.list_type is float or self.list_type is bool:
             return array(self)
-        if issubclass(self.list_type, JsonObject):
-            return array([i.get_numeric_values() for i in self])
-        raise "Numpy conversion can only be done on typed json lists with types float, int, bool or JsonObject"
+        return array([i.get_values() for i in self if isinstance(i, JsonObject)])
 
     def from_numpy_array(self, a):
         self.clear()
-        columns = self.list_type().get_numeric_columns()
+        columns = self.list_type().get_columns()
         for row in a:
             ni = self.list_type()
             for i, c in enumerate(columns):
@@ -431,3 +449,18 @@ class JsonList(list):
             for c in columns:
                 ni[c] = row[c]
             self.append(ni)
+
+
+class JsonString(str):
+    def __new__(cls, string=""):
+        if string:
+            try:
+                o = JsonObject.load(string)
+                instance = super().__new__(cls, str(o))
+                setattr(instance, "value", o)
+            except:
+                instance = super().__new__(cls, string)
+                setattr(instance, "value", None)
+        else:
+            instance = super().__new__(cls)
+        return instance
