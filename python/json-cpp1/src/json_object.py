@@ -4,6 +4,7 @@ from datetime import datetime
 import requests
 from os import path
 
+
 def json_parameters_function():
     def inner(func):
         def wrapper(json_object):
@@ -57,6 +58,7 @@ class JsonObject:
                 s += "%s" % str(i)
         return "{%s}" % s
 
+
     def get_numeric_values(self):
         values = JsonList()
         for k in self.get_numeric_columns():
@@ -80,6 +82,14 @@ class JsonObject:
                 if t is float or t is int or t is bool:
                     columns.append(v)
         return columns
+
+    def into(self, cls: type):
+        if not issubclass(cls, JsonObject):
+            raise RuntimeError("type must derive from JsonObject")
+        nv = cls()
+        for c in self.get_columns():
+            nv[c] = self[c]
+        return nv
 
     def get_columns(self):
         columns = JsonList(list_type=str)
@@ -233,9 +243,84 @@ class JsonObject:
                 return cls.parse(req.text)
         return None
 
+    def __dataframe_values__(self):
+        return [v.to_dataseries(recursive=True) if isinstance(v, JsonObject) else v.to_dataframe(recursive=True) if isinstance(v, JsonList) else v for v in self.get_values()]
+
+    def to_dataseries(self, recursive: bool = False):
+        import pandas as pd
+        columns = self.get_columns()
+        if recursive:
+            values = self.__dataframe_values__()
+        else:
+            values = self.get_values()
+
+        return pd.core.series.Series(dict(zip(columns,values)))
+
+
+class SortOrder:
+    Ascending = 0
+    Descending = 1
+
+
+class SearchType:
+    Aprox = 0
+    Exact = 1
+
+
+def bin_search(l, v, order=SortOrder.Ascending, search_type=SearchType.Aprox, key=None):
+    lo = 0
+    hi = len(l) - 1
+    mi = int((hi + lo) / 2)
+    if order == SortOrder.Ascending:
+        if key is None:
+            while hi != lo and l[mi] != v:
+                if v > l[mi]:
+                    lo = mi + 1
+                else:
+                    hi = mi
+                mi = (hi + lo) // 2
+            if l[mi] == v:
+                return mi
+        else:
+            cv = key(l[mi])
+            while hi != lo and cv != v:
+                if v > cv:
+                    lo = mi + 1
+                else:
+                    hi = mi
+                mi = (hi + lo) // 2
+                cv = key(l[mi])
+            if cv == v:
+                return mi
+    else:
+        if key is None:
+            while hi != lo and l[mi] != v:
+                if v < l[mi]:
+                    lo = mi + 1
+                else:
+                    hi = mi
+                mi = (hi + lo) // 2
+            if l[mi] == v:
+                return mi
+        else:
+            cv = key(l[mi])
+            while hi != lo and cv != v:
+                if v < cv:
+                    lo = mi + 1
+                else:
+                    hi = mi
+                mi = (hi + lo) // 2
+                cv = key(l[mi])
+            if cv == v:
+                return mi
+
+    if search_type == SearchType.Aprox:
+        return mi
+    else:
+        raise RuntimeError("Value not found")
+
 
 class JsonList(list):
-
     def __init__(self, list_type=None, iterable=None, allow_empty: bool = False):
         iterable = list() if not iterable else iterable
         iter(iterable)
@@ -253,6 +338,7 @@ class JsonList(list):
         newclass = type(list_type_name, (JsonList,), {"__init__": __init__})
         return newclass
 
+
     def _typeCheck(self, val):
         if val is None and self.allow_empty:
             return
@@ -261,8 +347,8 @@ class JsonList(list):
                 val = float(val)
             check_type(val, self.list_type, "Wrong type %s, this list can hold only instances of %s" % (type(val), str(self.list_type)))
         else:
-            if not (issubclass(type(val), JsonObject) or isinstance(val, (str, int, float, bool, JsonList))):
-                raise TypeError("Wrong type %s, this list can hold only str, int, float, bool, JsonObject or JsonList" % (type(val),))
+            if not (issubclass(type(val), JsonObject) or isinstance(val, (str, int, float, bool, datetime, JsonList))):
+                raise TypeError("Wrong type %s, this list can hold only str, int, float, bool, datetime, JsonObject or JsonList" % (type(val),))
 
     def __iadd__(self, other):
         map(self._typeCheck, other)
@@ -318,7 +404,7 @@ class JsonList(list):
                 l.append(vars(i)[m])
         return l
 
-    def where(self, m: str, v, o: str="=="):
+    def where(self, m: str, v, o: str = "=="):
         d = {}
         if type(v) is str:
             criteria = "def criteria(i): return i.%s %s '%s'" % (m, o, v)
@@ -331,7 +417,7 @@ class JsonList(list):
         return self.filter(d["criteria"])
 
     def split_by(self, m) -> dict:
-        if type(m) is str and issubclass(self.list_type, JsonObject) :
+        if type(m) is str and issubclass(self.list_type, JsonObject):
             d = {}
             exec("def criteria(i): return i.%s" % m, d)
             m = d["criteria"]
@@ -344,30 +430,27 @@ class JsonList(list):
             r[l].append(i)
         return r
 
-    def filter(self, l):
+    def filter(self, key):
         nl = self.__class__()
         for i in self:
-            if l(i):
+            if key(i):
                 nl.append(i)
         return nl
 
-    def find_first(self, l):
-        return self[self.find_first_index(l)]
+    def find_first(self, key):
+        return self[self.find_first_index(key)]
 
-    def find_first_index(self, l):
+    def find_first_index(self, key):
         for ix, i in enumerate(self):
-            if l(i):
+            if key(i):
                 return ix
         raise RuntimeError("Value not found")
 
-    def find_ordered(self, l, value):
-        return self[self.find_ordered_index(l, value)]
+    def find_ordered(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending):
+        return self[self.find_ordered_index(value, key=key, search_type=search_type, order=order)]
 
-    def find_ordered_index(self, l, value):
-        from bisect import bisect_left
-        i = bisect_left(self, value, key=l)
-        if i < 0 or i >= len(self) or l(self[i]) != value:
-            raise RuntimeError("Value %s not found" % str(value))
+    def find_ordered_index(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending):
+        i = bin_search(self, value, key=key, search_type=search_type, order=order)
         return i
 
     def process(self, l):
@@ -399,6 +482,10 @@ class JsonList(list):
                 new_list.append(it.parse(json_dictionary=i))
             elif issubclass(ic, JsonList):
                 new_list.append(it.parse(json_list=i))
+            elif issubclass(ic, datetime):
+                new_list.append(datetime.strptime(i, JsonDate.date_format))
+            elif issubclass(ic, JsonString):
+                new_list.append(JsonString(i))
             else:
                 new_list.append(i)
         return new_list
@@ -436,10 +523,25 @@ class JsonList(list):
                 ni[c] = row[i]
             self.append(ni)
 
-    def to_dataframe(self):
+    def to_dataframe(self, recursive: bool = False):
         from pandas import DataFrame
-        columns = self.list_type().get_columns()
-        return DataFrame([i.get_values() for i in self], columns=columns)
+        if self.list_type is JsonObject or self.list_type is None:
+            if len(self) == 0:
+                return DataFrame()
+            if isinstance(self[0], JsonObject):
+                columns = self[0].get_columns()
+            else:
+                raise RuntimeError("Item type cannot be loaded to dataframe")
+        else:
+            if issubclass(self.list_type, JsonObject):
+                columns = self.list_type().get_columns()
+            else:
+                return DataFrame(self)
+
+        if recursive:
+            return DataFrame([i.__dataframe_values__() for i in self], columns=columns)
+        else:
+            return DataFrame([i.get_values() for i in self], columns=columns)
 
     def from_dataframe(self, df):
         self.clear()
