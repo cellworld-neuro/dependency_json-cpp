@@ -267,7 +267,12 @@ class SearchType:
     Exact = 1
 
 
-def bin_search(l, v, order=SortOrder.Ascending, search_type=SearchType.Aprox, key=None):
+class NotFoundBehavior:
+    RaiseError = 0
+    ReturnNone = 1
+
+
+def bin_search(l, v, order=SortOrder.Ascending, search_type=SearchType.Aprox, key=None, not_found_behavior=NotFoundBehavior.RaiseError):
     lo = 0
     hi = len(l) - 1
     mi = int((hi + lo) / 2)
@@ -317,7 +322,10 @@ def bin_search(l, v, order=SortOrder.Ascending, search_type=SearchType.Aprox, ke
     if search_type == SearchType.Aprox:
         return mi
     else:
-        raise RuntimeError("Value not found")
+        if not_found_behavior == NotFoundBehavior.RaiseError:
+            raise RuntimeError("Value not found")
+        else:
+            return None
 
 
 class JsonList(list):
@@ -437,21 +445,31 @@ class JsonList(list):
                 nl.append(i)
         return nl
 
-    def find_first(self, key):
-        return self[self.find_first_index(key)]
+    def find_first(self, key, not_found_behavior=NotFoundBehavior.RaiseError):
+        i = self.find_first_index(key, not_found_behavior=not_found_behavior)
+        return None if i is None else self[i]
 
-    def find_first_index(self, key):
-        for ix, i in enumerate(self):
-            if key(i):
-                return ix
-        raise RuntimeError("Value not found")
+    def find_first_index(self, key, not_found_behavior=NotFoundBehavior.RaiseError):
+        if callable(key):
+            for ix, i in enumerate(self):
+                if key(i):
+                    return ix
+        else:
+            for ix, i in enumerate(self):
+                if key == i:
+                    return ix
 
-    def find_ordered(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending):
-        return self[self.find_ordered_index(value, key=key, search_type=search_type, order=order)]
+        if not_found_behavior == NotFoundBehavior.RaiseError:
+            raise RuntimeError("Value not found")
+        else:
+            return None
 
-    def find_ordered_index(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending):
-        i = bin_search(self, value, key=key, search_type=search_type, order=order)
-        return i
+    def find_ordered(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending, not_found_behavior=NotFoundBehavior.RaiseError):
+        i = bin_search(self, value, key=key, search_type=search_type, order=order, not_found_behavior=not_found_behavior)
+        return None if i is None else self[i]
+
+    def find_ordered_index(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending, not_found_behavior=NotFoundBehavior.RaiseError):
+        return bin_search(self, value, key=key, search_type=search_type, order=order, not_found_behavior=not_found_behavior)
 
     def process(self, l):
         nl = JsonList()
