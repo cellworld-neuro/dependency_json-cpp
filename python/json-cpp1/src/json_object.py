@@ -5,20 +5,31 @@ import requests
 from os import path
 
 
-def json_parameters_function():
-    def inner(func):
-        def wrapper(json_object):
-            if type(json_object) is str:
-                json_object = JsonObject.load(json_object)
-            p = {}
-            for v in func.__code__.co_varnames:
-                if v in json_object.__dict__:
-                    p[v] = json_object.__dict__[v]
-                else:
-                    p[v] = None
-            return func(**p)
-        return wrapper
-    return inner
+def json_force_parameter_type(funct):
+    def decorated(*args, **kwargs):
+        from inspect import signature
+        from json_cpp.json_object import JsonObject
+        if args:
+            args = list(args)
+        parameters = signature(funct).parameters
+        for pi, p in enumerate(parameters):
+            if issubclass(parameters[p].annotation, JsonObject) and parameters[p].annotation is not JsonObject:
+                if p in kwargs and isinstance(kwargs[p], JsonObject):
+                    kwargs[p] = kwargs[p].into(parameters[p].annotation)
+                if pi < len(args):
+                    args.insert(pi, args.pop(pi).into(parameters[p].annotation))
+
+        return funct(*args, **kwargs)
+    return decorated
+
+
+def json_parameters_function(funct):
+    def decorated(json_object_or_json_string):
+        if type(json_object_or_json_string) is str:
+            json_object = JsonObject.load(json_object_or_json_string)
+        p = json_object.to_dict()
+        return funct(**p)
+    return decorated
 
 
 class classorinstancemethod(classmethod):
@@ -254,8 +265,10 @@ class JsonObject:
         else:
             values = self.get_values()
 
-        return pd.core.series.Series(dict(zip(columns,values)))
+        return pd.core.series.Series(dict(zip(columns, values)))
 
+    def to_dict(self):
+        return {a: b for a, b in zip(self.get_members(), self.get_values())}
 
 class SortOrder:
     Ascending = 0
