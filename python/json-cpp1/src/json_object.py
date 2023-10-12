@@ -97,9 +97,7 @@ class JsonObject:
     def into(self, cls: type):
         if not issubclass(cls, JsonObject):
             raise RuntimeError("type must derive from JsonObject")
-        nv = cls()
-        for c in self.get_columns():
-            nv[c] = self[c]
+        nv = cls.parse(str(self))
         return nv
 
     def get_columns(self):
@@ -582,6 +580,12 @@ class JsonList(list):
             for c in columns:
                 ni[c] = row[c]
             self.append(ni)
+
+    def into(self, cls: type):
+        if not issubclass(cls, JsonList):
+            raise RuntimeError("type must derive from JsonList")
+        nv = cls.parse(str(self))
+        return nv
 
 
 class JsonString(str):
