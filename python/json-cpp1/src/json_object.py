@@ -268,7 +268,7 @@ class JsonObject:
         return pd.core.series.Series(dict(zip(columns, values)))
 
     def to_dict(self):
-        return {a: b for a, b in zip(self.get_members(), self.get_values())}
+        return {a: self[a] for a in self.get_members()}
 
 class SortOrder:
     Ascending = 0
