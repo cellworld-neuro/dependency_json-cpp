@@ -18,6 +18,11 @@ def json_force_parameter_type(funct):
                     kwargs[p] = kwargs[p].into(parameters[p].annotation)
                 if pi < len(args):
                     args.insert(pi, args.pop(pi).into(parameters[p].annotation))
+            elif issubclass(parameters[p].annotation, JsonList) and parameters[p].annotation is not JsonList:
+                if p in kwargs and isinstance(kwargs[p], JsonList):
+                    kwargs[p] = kwargs[p].into(parameters[p].annotation)
+                if pi < len(args):
+                    args.insert(pi, args.pop(pi).into(parameters[p].annotation))
 
         return funct(*args, **kwargs)
     return decorated
