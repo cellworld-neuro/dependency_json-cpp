@@ -37,6 +37,15 @@ def json_parameters_function(funct):
     return decorated
 
 
+def json_parameters_method(funct):
+    def decorated(self, json_object_or_json_string):
+        if type(json_object_or_json_string) is str:
+            json_object = JsonObject.load(json_object_or_json_string)
+        p = json_object.to_dict()
+        return funct(self, **p)
+    return decorated
+
+
 class classorinstancemethod(classmethod):
 
     def __get__(self, instance, type_):

@@ -1,5 +1,5 @@
 def __module_version__():
-	return 1, 0, 86 
+	return 1, 0, 89 
 
 
 def __module_name__():
@@ -46,10 +46,6 @@ def __files__():
 	return ['json_object.py', 'util.py'] 
 
 
-def __additional_files__():
-	return [] 
-
-
 def __setup_py__():
 	return '../setup/setup.py' 
 
@@ -64,5 +60,9 @@ def __root_folder__():
 
 def __description__():
 	return 'a better json library' 
+
+
+def __package_data__():
+	return {} 
 
 
