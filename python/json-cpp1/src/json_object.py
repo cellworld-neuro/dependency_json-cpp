@@ -32,6 +32,10 @@ def json_parameters_function(funct):
     def decorated(json_object_or_json_string):
         if type(json_object_or_json_string) is str:
             json_object = JsonObject.load(json_object_or_json_string)
+        elif isinstance(json_object_or_json_string, JsonObject):
+            json_object = json_object_or_json_string
+        else:
+            raise TypeError("Parameter must be str or JsonObject instance")
         p = json_object.to_dict()
         return funct(**p)
     return decorated
@@ -41,6 +45,10 @@ def json_parameters_method(funct):
     def decorated(self, json_object_or_json_string):
         if type(json_object_or_json_string) is str:
             json_object = JsonObject.load(json_object_or_json_string)
+        elif isinstance(json_object_or_json_string, JsonObject):
+            json_object = json_object_or_json_string
+        else:
+            raise TypeError("Parameter must be str or JsonObject instance")
         p = json_object.to_dict()
         return funct(self, **p)
     return decorated
