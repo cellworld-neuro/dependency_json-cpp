@@ -3,62 +3,8 @@ from .util import check_type
 from datetime import datetime
 import requests
 from os import path
-
-
-def json_force_parameter_type(funct):
-    def decorated(*args, **kwargs):
-        from inspect import signature
-        from json_cpp.json_object import JsonObject
-        if args:
-            args = list(args)
-        parameters = signature(funct).parameters
-        for pi, p in enumerate(parameters):
-            if issubclass(parameters[p].annotation, JsonObject) and parameters[p].annotation is not JsonObject:
-                if p in kwargs and isinstance(kwargs[p], JsonObject):
-                    kwargs[p] = kwargs[p].into(parameters[p].annotation)
-                if pi < len(args):
-                    args.insert(pi, args.pop(pi).into(parameters[p].annotation))
-            elif issubclass(parameters[p].annotation, JsonList) and parameters[p].annotation is not JsonList:
-                if p in kwargs and isinstance(kwargs[p], JsonList):
-                    kwargs[p] = kwargs[p].into(parameters[p].annotation)
-                if pi < len(args):
-                    args.insert(pi, args.pop(pi).into(parameters[p].annotation))
-
-        return funct(*args, **kwargs)
-    return decorated
-
-
-def json_parameters_function(funct):
-    def decorated(json_object_or_json_string):
-        if type(json_object_or_json_string) is str:
-            json_object = JsonObject.load(json_object_or_json_string)
-        elif isinstance(json_object_or_json_string, JsonObject):
-            json_object = json_object_or_json_string
-        else:
-            raise TypeError("Parameter must be str or JsonObject instance")
-        p = json_object.to_dict()
-        return funct(**p)
-    return decorated
-
-
-def json_parameters_method(funct):
-    def decorated(self, json_object_or_json_string):
-        if type(json_object_or_json_string) is str:
-            json_object = JsonObject.load(json_object_or_json_string)
-        elif isinstance(json_object_or_json_string, JsonObject):
-            json_object = json_object_or_json_string
-        else:
-            raise TypeError("Parameter must be str or JsonObject instance")
-        p = json_object.to_dict()
-        return funct(self, **p)
-    return decorated
-
-
-class classorinstancemethod(classmethod):
-
-    def __get__(self, instance, type_):
-        descr_get = super().__get__ if instance is None else self.__func__.__get__
-        return descr_get(instance, type_)
+from .decorators import classorinstancemethod
+from .search import bin_search, SearchType, SortOrder, NotFoundBehavior
 
 
 class JsonDate:
@@ -67,7 +13,11 @@ class JsonDate:
 
 class JsonObject:
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
+        if args:
+            if type(args[0]) is str:
+                parsed = JsonObject.load(args[0])
+                JsonObject.__init__(self, **parsed.to_dict())
         if type(self) is JsonObject:
             for key, value in kwargs.items():
                 setattr(self, key, value)
@@ -289,76 +239,6 @@ class JsonObject:
 
     def to_dict(self):
         return {a: self[a] for a in self.get_members()}
-
-class SortOrder:
-    Ascending = 0
-    Descending = 1
-
-
-class SearchType:
-    Aprox = 0
-    Exact = 1
-
-
-class NotFoundBehavior:
-    RaiseError = 0
-    ReturnNone = 1
-
-
-def bin_search(l, v, order=SortOrder.Ascending, search_type=SearchType.Aprox, key=None, not_found_behavior=NotFoundBehavior.RaiseError):
-    lo = 0
-    hi = len(l) - 1
-    mi = int((hi + lo) / 2)
-    if order == SortOrder.Ascending:
-        if key is None:
-            while hi != lo and l[mi] != v:
-                if v > l[mi]:
-                    lo = mi + 1
-                else:
-                    hi = mi
-                mi = (hi + lo) // 2
-            if l[mi] == v:
-                return mi
-        else:
-            cv = key(l[mi])
-            while hi != lo and cv != v:
-                if v > cv:
-                    lo = mi + 1
-                else:
-                    hi = mi
-                mi = (hi + lo) // 2
-                cv = key(l[mi])
-            if cv == v:
-                return mi
-    else:
-        if key is None:
-            while hi != lo and l[mi] != v:
-                if v < l[mi]:
-                    lo = mi + 1
-                else:
-                    hi = mi
-                mi = (hi + lo) // 2
-            if l[mi] == v:
-                return mi
-        else:
-            cv = key(l[mi])
-            while hi != lo and cv != v:
-                if v < cv:
-                    lo = mi + 1
-                else:
-                    hi = mi
-                mi = (hi + lo) // 2
-                cv = key(l[mi])
-            if cv == v:
-                return mi
-
-    if search_type == SearchType.Aprox:
-        return mi
-    else:
-        if not_found_behavior == NotFoundBehavior.RaiseError:
-            raise RuntimeError("Value not found")
-        else:
-            return None
 
 
 class JsonList(list):
