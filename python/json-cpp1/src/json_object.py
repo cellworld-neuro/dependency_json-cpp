@@ -37,6 +37,8 @@ class JsonObject:
                 s += "\"%s\"" % i.strftime(JsonDate.date_format)
             elif isinstance(i, bool):
                 s += "%s" % str(i).lower()
+            elif i is None:
+                s += "null"
             else:
                 s += "%s" % str(i)
         return "{%s}" % s
