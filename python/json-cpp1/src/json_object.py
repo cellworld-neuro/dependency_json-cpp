@@ -43,7 +43,6 @@ class JsonObject:
                 s += "%s" % str(i)
         return "{%s}" % s
 
-
     def get_numeric_values(self):
         values = JsonList()
         for k in self.get_numeric_columns():
@@ -55,6 +54,16 @@ class JsonObject:
         for k in self.get_columns():
             values.append(self[k])
         return values
+
+    def set_values(self, values: list):
+        columns = self.get_columns()
+        if len(columns) != len(values):
+            if len(columns) < len(values):
+                raise RuntimeError("Not enough values to populate JsonObject. Expected: %i, Received: %i" % (len(columns), len(values)))
+            else:
+                raise RuntimeError("Too many values to populate JsonObject. Expected: %i, Received: %i" % (len(columns), len(values)))
+        for i, k in enumerate(self.get_columns()):
+            self[k] = values[i]
 
     def get_numeric_columns(self):
         columns = JsonList(list_type=str)
