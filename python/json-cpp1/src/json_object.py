@@ -52,7 +52,11 @@ class JsonObject:
     def get_values(self):
         values = JsonList()
         for k in self.get_columns():
-            values.append(self[k])
+            value = self[k]
+            if isinstance(value, JsonList):
+                values.append(value.get_values())
+            else:
+                values.append(value)
         return values
 
     def set_values(self, values: list):
@@ -63,7 +67,11 @@ class JsonObject:
             else:
                 raise RuntimeError("Too many values to populate JsonObject. Expected: %i, Received: %i" % (len(columns), len(values)))
         for i, k in enumerate(self.get_columns()):
-            self[k] = values[i]
+            if isinstance(self[k], JsonList):
+                self[k].set_values(values[i])
+            else:
+                self[k] = values[i]
+        return values
 
     def get_numeric_columns(self):
         columns = JsonList(list_type=str)
@@ -168,20 +176,23 @@ class JsonObject:
         else:
             new_object = cls_or_self
 
-        for key in json_dictionary:
-            member = getattr(new_object, key)
-            it = type(member)
-            if issubclass(it, JsonObject):
-                av = it.parse(json_dictionary=json_dictionary[key])
-                setattr(new_object, key, av)
-            elif issubclass(it, JsonList):
-                member.parse(json_list=json_dictionary[key])
-            elif it is datetime:
-                av = datetime.strptime(json_dictionary[key], JsonDate.date_format)
-                setattr(new_object, key, av)
-            else:
-                av = it(json_dictionary[key])
-                setattr(new_object, key, av)
+        if type(json_dictionary) is list:
+            new_object.set_values(json_dictionary)
+        else:
+            for key in json_dictionary:
+                member = getattr(new_object, key)
+                it = type(member)
+                if issubclass(it, JsonObject):
+                    av = it.parse(json_dictionary=json_dictionary[key])
+                    setattr(new_object, key, av)
+                elif issubclass(it, JsonList):
+                    member.parse(json_list=json_dictionary[key])
+                elif it is datetime:
+                    av = datetime.strptime(json_dictionary[key], JsonDate.date_format)
+                    setattr(new_object, key, av)
+                else:
+                    av = it(json_dictionary[key])
+                    setattr(new_object, key, av)
         return new_object
 
     @staticmethod
@@ -279,7 +290,7 @@ class JsonList(list):
                 val = float(val)
             check_type(val, self.list_type, "Wrong type %s, this list can hold only instances of %s" % (type(val), str(self.list_type)))
         else:
-            if not (issubclass(type(val), JsonObject) or isinstance(val, (str, int, float, bool, datetime, JsonList))):
+            if not isinstance(val, (str, int, float, bool, datetime, JsonList, JsonObject)):
                 raise TypeError("Wrong type %s, this list can hold only str, int, float, bool, datetime, JsonObject or JsonList" % (type(val),))
 
     def __iadd__(self, other):
@@ -403,6 +414,24 @@ class JsonList(list):
 
     def copy(self):
         return self.__class__.parse(str(self))
+
+    def get_values(self):
+        values = JsonList(list_type=JsonList)
+        for i in self:
+            if isinstance(i, (JsonObject, JsonList)):
+                values.append(i.get_values())
+            else:
+                values.append(i)
+        return values
+
+    def set_values(self, values: list):
+        for i in values:
+            if issubclass(self.list_type, (JsonObject, JsonList)):
+                ni = self.list_type()
+                ni.set_values(i)
+                self.append(ni)
+            else:
+                self.append(i)
 
     @classorinstancemethod
     def parse(cls_or_self, json_string="", json_list=None):
