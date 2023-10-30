@@ -1,12 +1,19 @@
-from cellworld import *
-w = World.get_from_parameters_names("hexagonal", "canonical", "21_05")
+from src import *
 
-print(w.configuration.get_values())
+class Coordinates(JsonObject):
+    def __init__(self, x: int=0, y: int=0):
+        self.x = x
+        self.y = y
+@json_parse
+@json_parameters
+@json_force_parameter_type
+def sum(c1: Coordinates, c2: Coordinates):
+    s = Coordinates(c1.x + c2.x, c1.y + c2.y)
+    return s
 
-values = w.configuration.get_values()
 
-c = World_configuration()
+# print(sum(Coordinates(10,10), Coordinates(5,7)))
+# print(sum(JsonObject(x=10,y=10), Coordinates(5,7)))
 
-c.set_values(values)
-
-print(c)
+print(sum(str(JsonObject(c1=JsonObject(x=1, y=2), c2=JsonObject(x=1, y=2)))))
+print(json_get_parameters(sum))
