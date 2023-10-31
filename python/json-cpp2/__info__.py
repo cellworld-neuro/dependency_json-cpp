@@ -35,7 +35,7 @@ def __license_file__():
 
 
 def __readme_file__():
-	return '../resources/readme.md' 
+	return '../resources/README.md'
 
 
 def __package_name__():

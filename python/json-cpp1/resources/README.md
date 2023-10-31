@@ -24,7 +24,7 @@ age: 41 int
 weight: 190.0 float
 {"name":"German Espinosa","age":41,"weight":190.0}
 ```
-###Loading json_data:
+### Loading json_data:
 To quickly load json data into objects, use the load command:
 ```
 from json_cpp import JsonObject
@@ -41,7 +41,7 @@ name: German Espinosa str
 age: 41 int
 weight: 190.0 float
 ```
-###Formatting outputs:
+### Formatting outputs:
 You can easily format data, even in complex json hierarchical structures:
 ```
 from json_cpp import JsonObject
@@ -54,7 +54,7 @@ output
 ```
 German Espinosa was born in Buenos Aires, Argentina
 ```
-###Working with pre-structured data:
+### Working with pre-structured data:
 A powerful way to read and write json is to pre-define the structure of the data. This creates standarized data samples that are easire to be consumed by other tools.
 To pre-define structure of a json object, you need to create your own custom class extending the JsonObject: 
 ```
@@ -79,7 +79,7 @@ output
 {"name":"German Espinosa","age":41,"weight":190.0}
 ```
 
-###Loading values into an existing object:
+### Loading values into an existing object:
 You can also load values from a json string directly into an existing custom JsonObject:
 ```
 from json_cpp import JsonObject
@@ -105,7 +105,7 @@ output
 ```
 
 
-###Object to json conversion:
+### Object to json conversion:
 
 All objects with type MyJsonClass will produce perfectly formed json when converted to string.
 If you need to retrieve the json string representing the object:
