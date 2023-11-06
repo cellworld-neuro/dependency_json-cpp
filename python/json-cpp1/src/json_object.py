@@ -7,6 +7,11 @@ from .decorators import classorinstancemethod
 from .search import bin_search, SearchType, SortOrder, NotFoundBehavior
 
 
+class JsonParseBehavior:
+    RaiseError = 0
+    IgnoreNewAttributes = 1
+    IncorporateNewAttributes = 2
+
 class JsonDate:
     """
     A utility class representing date format configurations for JSON serialization and deserialization.
@@ -141,7 +146,8 @@ class JsonObject:
                     columns.append(v)
         return columns
 
-    def into(self, cls: type):
+    def into(self, cls: type,
+             behavior: JsonParseBehavior = JsonParseBehavior.RaiseError):
         """
         Convert the current JsonObject into an instance of another JsonObject-derived class.
 
@@ -156,7 +162,7 @@ class JsonObject:
         """
         if not issubclass(cls, JsonObject):
             raise RuntimeError("type must derive from JsonObject")
-        nv = cls.parse(str(self))
+        nv = cls.parse(json_string=str(self), behavior=behavior)
         return nv
 
     def get_columns(self):
@@ -301,8 +307,12 @@ class JsonObject:
                 format_string = format_string[:pos] + sub_str + format_string[sub_format_end:]
         return format_string.format(**vars(self))
 
+
     @classorinstancemethod
-    def parse(cls_or_self, json_string: str = "", json_dictionary: dict = None):
+    def parse(cls_or_self,
+              json_string: str = "",
+              json_dictionary: dict = None,
+              behavior: JsonParseBehavior = JsonParseBehavior.RaiseError):
         """
         Parse a JSON string or dictionary to populate a JsonObject instance.
 
@@ -328,19 +338,32 @@ class JsonObject:
             new_object.set_values(json_dictionary)
         else:
             for key in json_dictionary:
-                member = getattr(new_object, key)
-                it = type(member)
-                if issubclass(it, JsonObject):
-                    av = it.parse(json_dictionary=json_dictionary[key])
-                    setattr(new_object, key, av)
-                elif issubclass(it, JsonList):
-                    member.parse(json_list=json_dictionary[key])
-                elif it is datetime:
-                    av = datetime.strptime(json_dictionary[key], JsonDate.date_format)
-                    setattr(new_object, key, av)
+                if hasattr(new_object, key):
+                    member = getattr(new_object, key)
+                    it = type(member)
+                    if issubclass(it, JsonObject):
+                        av = it.parse(json_dictionary=json_dictionary[key])
+                        setattr(new_object, key, av)
+                    elif issubclass(it, JsonList):
+                        member.parse(json_list=json_dictionary[key])
+                    elif it is datetime:
+                        av = datetime.strptime(json_dictionary[key], JsonDate.date_format)
+                        setattr(new_object, key, av)
+                    else:
+                        av = it(json_dictionary[key])
+                        setattr(new_object, key, av)
                 else:
-                    av = it(json_dictionary[key])
-                    setattr(new_object, key, av)
+                    if behavior == JsonParseBehavior.IgnoreNewAttributes:
+                        continue
+                    elif behavior == JsonParseBehavior.IncorporateNewAttributes:
+                        if isinstance(json_dictionary[key], (dict, list)):
+                            av = JsonObject.load(json_dictionary_or_list=json_dictionary[key])
+                            setattr(new_object, key, av)
+                        else:
+                            setattr(new_object, key, json_dictionary[key])
+                    else:
+                        raise RuntimeError("attribute %s not found in class %s" % (key, new_object.__class__.__name__))
+
         return new_object
 
     @staticmethod
@@ -902,6 +925,7 @@ class JsonList(list):
                 self.append(ni)
             else:
                 self.append(i)
+
 
     @classorinstancemethod
     def parse(cls_or_self, json_string="", json_list=None):

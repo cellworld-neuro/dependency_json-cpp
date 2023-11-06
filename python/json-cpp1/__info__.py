@@ -1,5 +1,5 @@
 def __module_version__():
-	return 1, 0, 115 
+	return 1, 0, 120 
 
 
 def __module_name__():
@@ -44,6 +44,10 @@ def __package_name__():
 
 def __files__():
 	return ['json_object.py', 'decorators.py', 'search.py', 'util.py'] 
+
+
+def __additional_files__():
+	return '' 
 
 
 def __setup_py__():
