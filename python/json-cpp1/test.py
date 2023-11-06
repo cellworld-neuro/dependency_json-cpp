@@ -17,3 +17,10 @@ def sum(c1: Coordinates, c2: Coordinates):
 
 print(sum(str(JsonObject(c1=JsonObject(x=1, y=2), c2=JsonObject(x=1, y=2)))))
 print(json_get_parameters(sum))
+
+print(Coordinates.parse('{"x":1, "y":2, "z":3}',behavior=JsonParseBehavior.IgnoreNewAttributes))
+print(Coordinates.parse('{"x":1, "y":2, "z":3}',behavior=JsonParseBehavior.IncorporateNewAttributes))
+
+print(Coordinates.parse('{"x":1, "y":2, "z":[{"a":2},2,3]}',behavior=JsonParseBehavior.IncorporateNewAttributes))
+
+print(Coordinates.parse('{"x":1, "y":2, "z":[{"a":2},2,3]}',behavior=JsonParseBehavior.RaiseError))
