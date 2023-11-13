@@ -5,12 +5,14 @@ import requests
 from os import path
 from .decorators import classorinstancemethod
 from .search import bin_search, SearchType, SortOrder, NotFoundBehavior
+from enum import Enum
 
 
-class JsonParseBehavior:
+class JsonParseBehavior(Enum):
     RaiseError = 0
     IgnoreNewAttributes = 1
     IncorporateNewAttributes = 2
+
 
 class JsonDate:
     """
