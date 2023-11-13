@@ -1,19 +1,27 @@
-class SortOrder:
+from enum import Enum
+
+
+class SortOrder(Enum):
     Ascending = 0
     Descending = 1
 
 
-class SearchType:
+class SearchType(Enum):
     Aprox = 0
     Exact = 1
 
 
-class NotFoundBehavior:
+class NotFoundBehavior(Enum):
     RaiseError = 0
     ReturnNone = 1
 
 
-def bin_search(l, v, order=SortOrder.Ascending, search_type=SearchType.Aprox, key=None, not_found_behavior=NotFoundBehavior.RaiseError):
+def bin_search(l,
+               v,
+               order: SortOrder = SortOrder.Ascending,
+               search_type: SearchType = SearchType.Aprox,
+               key=None,
+               not_found_behavior: NotFoundBehavior = NotFoundBehavior.RaiseError):
     lo = 0
     hi = len(l) - 1
     mi = int((hi + lo) / 2)

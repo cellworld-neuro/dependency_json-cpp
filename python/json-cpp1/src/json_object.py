@@ -838,7 +838,12 @@ class JsonList(list):
         else:
             return None
 
-    def find_ordered(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending, not_found_behavior=NotFoundBehavior.RaiseError):
+    def find_ordered(self,
+                     value,
+                     key=None,
+                     search_type: SearchType = SearchType.Exact,
+                     order: SortOrder = SortOrder.Ascending,
+                     not_found_behavior: NotFoundBehavior = NotFoundBehavior.RaiseError):
         """
         Search for an item in an ordered list.
 
@@ -855,7 +860,12 @@ class JsonList(list):
         i = bin_search(self, value, key=key, search_type=search_type, order=order, not_found_behavior=not_found_behavior)
         return None if i is None else self[i]
 
-    def find_ordered_index(self, value, key=None, search_type=SearchType.Exact, order=SortOrder.Ascending, not_found_behavior=NotFoundBehavior.RaiseError):
+    def find_ordered_index(self,
+                           value,
+                           key=None,
+                           search_type: SearchType = SearchType.Exact,
+                           order: SortOrder = SortOrder.Ascending,
+                           not_found_behavior: NotFoundBehavior = NotFoundBehavior.RaiseError):
         """
         Search for the index of an item in an ordered list.
 
@@ -869,7 +879,12 @@ class JsonList(list):
         Returns:
         int or None: The index of the found item or None based on the NotFoundBehavior.
         """
-        return bin_search(self, value, key=key, search_type=search_type, order=order, not_found_behavior=not_found_behavior)
+        return bin_search(self,
+                          value,
+                          key=key,
+                          search_type=search_type,
+                          order=order,
+                          not_found_behavior=not_found_behavior)
 
     def process(self, l):
         """
