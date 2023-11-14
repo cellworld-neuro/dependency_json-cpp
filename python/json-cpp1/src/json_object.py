@@ -58,8 +58,6 @@ class JsonObject:
         """
         s = ""
         for k in self.get_members():
-            if k[0] == "_":
-                continue
             if s:
                 s += ","
             s += "\"%s\":" % k
@@ -262,7 +260,7 @@ class JsonObject:
         members = []
         v = vars(self)
         for k in v:
-            if k[0] == "_":
+            if not k or k[0] == "_":
                 continue
             members.append(k)
         return members
