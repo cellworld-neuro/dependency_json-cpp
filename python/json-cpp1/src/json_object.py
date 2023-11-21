@@ -6,7 +6,7 @@ from os import path
 from .decorators import classorinstancemethod
 from .search import bin_search, SearchType, SortOrder, NotFoundBehavior
 from enum import Enum
-
+import base64
 
 class JsonParseBehavior(Enum):
     RaiseError = 0
@@ -61,11 +61,13 @@ class JsonObject:
             if s:
                 s += ","
             s += "\"%s\":" % k
-            i = self[k]
+            i = JsonObject.__getitem__(self, k)
             if isinstance(i, str):
                 s += "%s" % json.dumps(i)
             elif isinstance(i, datetime):
                 s += "\"%s\"" % i.strftime(JsonDate.date_format)
+            elif isinstance(i, bytes):
+                s += "\"%s\"" % base64.b64encode(i)
             elif isinstance(i, bool):
                 s += "%s" % str(i).lower()
             elif i is None:
@@ -83,7 +85,7 @@ class JsonObject:
         """
         values = JsonList()
         for k in self.get_numeric_columns():
-            values.append(self[k])
+            values.append(JsonObject.__getitem__(self, k))
         return values
 
     def get_values(self):
@@ -95,7 +97,7 @@ class JsonObject:
         """
         values = JsonList()
         for k in self.get_columns():
-            value = self[k]
+            value = JsonObject.__getitem__(self, k)
             if isinstance(value, JsonList):
                 values.append(value.get_values())
             else:
@@ -122,10 +124,10 @@ class JsonObject:
             else:
                 raise RuntimeError("Too many values to populate JsonObject. Expected: %i, Received: %i" % (len(columns), len(values)))
         for i, k in enumerate(self.get_columns()):
-            if isinstance(self[k], JsonList):
-                self[k].set_values(values[i])
+            if isinstance(JsonObject.__getitem__(self, k), JsonList):
+                JsonObject.__getitem__(self, k).set_values(values[i])
             else:
-                self[k] = values[i]
+                JsonObject.__setitem__(self, k, values[i])
         return values
 
     def get_numeric_columns(self):
@@ -137,10 +139,10 @@ class JsonObject:
         """
         columns = JsonList(list_type=str)
         for v in self.get_members():
-            if isinstance(self[v], JsonObject):
+            if isinstance(JsonObject.__getitem__(self, v), JsonObject):
                 columns += [v + "." + c for c in self[v].get_numeric_columns()]
             else:
-                i = self[v]
+                i = JsonObject.__getitem__(self, v)
                 t = type(i)
                 if t is float or t is int or t is bool:
                     columns.append(v)
@@ -174,8 +176,8 @@ class JsonObject:
         """
         columns = JsonList(list_type=str)
         for v in self.get_members():
-            if isinstance(self[v], JsonObject):
-                columns += [v + "." + c for c in self[v].get_columns()]
+            if isinstance(JsonObject.__getitem__(self, v), JsonObject):
+                columns += [v + "." + c for c in JsonObject.__getitem__(self, v).get_columns()]
             else:
                 columns.append(v)
         return columns
@@ -220,7 +222,7 @@ class JsonObject:
             parts = key.split(".")
             new_key = ".".join(parts[1:])
             key = parts[0]
-            return self[key][new_key]
+            return JsonObject.__getitem__(JsonObject.__getitem__(self, key), new_key)
         else:
             return getattr(self, key)
 
@@ -236,7 +238,7 @@ class JsonObject:
             parts = key.split(".")
             new_key = ".".join(parts[1:])
             key = parts[0]
-            self[key][new_key] = value
+            JsonObject.__setitem__(JsonObject.__getitem__(self, key), new_key, value)
         else:
             setattr(self, key, value)
 
@@ -288,7 +290,7 @@ class JsonObject:
             This method supports nested formatting for nested JsonObjects.
         """
         for k in self.get_members():
-            if not isinstance(self[k], JsonObject):
+            if not isinstance(JsonObject.__getitem__(self, k), JsonObject):
                 continue
             pos = format_string.find("{"+k+":")
             if pos >= 0:
@@ -303,7 +305,7 @@ class JsonObject:
                         bracket_count -= 1
                     sub_format_end += 1
                 sub_format = format_string[sub_format_start:sub_format_end-1]
-                sub_str = self[k].format(sub_format)
+                sub_str = JsonObject.__getitem__(self, k).format(sub_format)
                 format_string = format_string[:pos] + sub_str + format_string[sub_format_end:]
         return format_string.format(**vars(self))
 
@@ -348,6 +350,9 @@ class JsonObject:
                         member.parse(json_list=json_dictionary[key])
                     elif it is datetime:
                         av = datetime.strptime(json_dictionary[key], JsonDate.date_format)
+                        setattr(new_object, key, av)
+                    elif it is bytes:
+                        av = base64.b64decode(json_dictionary[key])
                         setattr(new_object, key, av)
                     else:
                         av = it(json_dictionary[key])
@@ -811,7 +816,7 @@ class JsonList(list):
         Any: The first item that meets the condition or a behavior based on the NotFoundBehavior.
         """
         i = self.find_first_index(key, not_found_behavior=not_found_behavior)
-        return None if i is None else self[i]
+        return None if i is None else JsonList.__getitem__(self, i)
 
     def find_first_index(self, key, not_found_behavior=NotFoundBehavior.RaiseError):
         """
@@ -858,7 +863,7 @@ class JsonList(list):
         Any: The found item or a behavior based on the NotFoundBehavior.
         """
         i = bin_search(self, value, key=key, search_type=search_type, order=order, not_found_behavior=not_found_behavior)
-        return None if i is None else self[i]
+        return None if i is None else JsonList.__getitem__(self, i)
 
     def find_ordered_index(self,
                            value,

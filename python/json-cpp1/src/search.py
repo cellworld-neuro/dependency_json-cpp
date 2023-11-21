@@ -27,44 +27,44 @@ def bin_search(l,
     mi = int((hi + lo) / 2)
     if order == SortOrder.Ascending:
         if key is None:
-            while hi != lo and l[mi] != v:
-                if v > l[mi]:
+            while hi != lo and list.__getitem__(l, mi) != v:
+                if v > list.__getitem__(l, mi):
                     lo = mi + 1
                 else:
                     hi = mi
                 mi = (hi + lo) // 2
-            if l[mi] == v:
+            if list.__getitem__(l, mi) == v:
                 return mi
         else:
-            cv = key(l[mi])
+            cv = key(list.__getitem__(l, mi))
             while hi != lo and cv != v:
                 if v > cv:
                     lo = mi + 1
                 else:
                     hi = mi
                 mi = (hi + lo) // 2
-                cv = key(l[mi])
+                cv = key(list.__getitem__(l, mi))
             if cv == v:
                 return mi
     else:
         if key is None:
-            while hi != lo and l[mi] != v:
-                if v < l[mi]:
+            while hi != lo and list.__getitem__(l, mi) != v:
+                if v < list.__getitem__(l, mi):
                     lo = mi + 1
                 else:
                     hi = mi
                 mi = (hi + lo) // 2
-            if l[mi] == v:
+            if list.__getitem__(l, mi) == v:
                 return mi
         else:
-            cv = key(l[mi])
+            cv = key(list.__getitem__(l, mi))
             while hi != lo and cv != v:
                 if v < cv:
                     lo = mi + 1
                 else:
                     hi = mi
                 mi = (hi + lo) // 2
-                cv = key(l[mi])
+                cv = key(list.__getitem__(l, mi))
             if cv == v:
                 return mi
 
