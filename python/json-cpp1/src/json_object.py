@@ -8,6 +8,7 @@ from .search import bin_search, SearchType, SortOrder, NotFoundBehavior
 from enum import Enum
 import base64
 
+
 class JsonParseBehavior(Enum):
     RaiseError = 0
     IgnoreNewAttributes = 1
@@ -62,6 +63,8 @@ class JsonObject:
                 s += ","
             s += "\"%s\":" % k
             i = JsonObject.__getitem__(self, k)
+            if isinstance(i, Enum):
+                i = i.name
             if isinstance(i, str):
                 s += "%s" % json.dumps(i)
             elif isinstance(i, datetime):
@@ -348,6 +351,9 @@ class JsonObject:
                         setattr(new_object, key, av)
                     elif issubclass(it, JsonList):
                         member.parse(json_list=json_dictionary[key])
+                    elif issubclass(it, Enum):
+                        av = it[json_dictionary[key]]
+                        setattr(new_object, key, av)
                     elif it is datetime:
                         av = datetime.strptime(json_dictionary[key], JsonDate.date_format)
                         setattr(new_object, key, av)
