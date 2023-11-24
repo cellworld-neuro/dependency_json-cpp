@@ -23,4 +23,16 @@ print(Coordinates.parse('{"x":1, "y":2, "z":3}',behavior=JsonParseBehavior.Incor
 
 print(Coordinates.parse('{"x":1, "y":2, "z":[{"a":2},2,3]}',behavior=JsonParseBehavior.IncorporateNewAttributes))
 
-print(Coordinates.parse('{"x":1, "y":2, "z":[{"a":2},2,3]}',behavior=JsonParseBehavior.RaiseError))
+#print(Coordinates.parse('{"x":1, "y":2, "z":[{"a":2},2,3]}',behavior=JsonParseBehavior.RaiseError))
+
+
+
+cl = JsonList()
+for i in range(10):
+    cl.append(Coordinates(i,-i))
+
+
+o = JsonObject(p1="Hello", cl=cl)
+
+
+print(o.format("{p1}\n{cl:{x},{y}\n}"))

@@ -293,7 +293,7 @@ class JsonObject:
             This method supports nested formatting for nested JsonObjects.
         """
         for k in self.get_members():
-            if not isinstance(JsonObject.__getitem__(self, k), JsonObject):
+            if not isinstance(JsonObject.__getitem__(self, k), (JsonObject,JsonList)):
                 continue
             pos = format_string.find("{"+k+":")
             if pos >= 0:
@@ -569,6 +569,26 @@ class JsonList(list):
         newclass = type(list_type_name, (JsonList,), {"__init__": __init__})
         return newclass
 
+    def format(self, format_string: str):
+        """
+        Formats the JsonList using a provided format string.
+
+        Args:
+            format_string (str): The format string containing placeholders that match keys in the JsonList element.
+
+        Returns:
+            str: A formatted string with placeholders replaced by their corresponding values from the JsonList element.
+
+        Note:
+            This method supports nested formatting for nested JsonList.
+        """
+        formatted_string = ""
+        for k in self:
+            if isinstance(k, (JsonObject, JsonList)):
+                formatted_string += k.format(format_string=format_string)
+            else:
+                formatted_string += format_string.format(k)
+        return formatted_string
 
     def _typeCheck(self, val):
         """
