@@ -35,4 +35,12 @@ for i in range(10):
 o = JsonObject(p1="Hello", cl=cl)
 
 
+o._links = JsonObject(href="https://www.google.com", text="Google")
+
 print(o.format("{p1}\n{cl:{x},{y}\n}"))
+
+
+print(o)
+o.force_include("_links")
+print(o)
+

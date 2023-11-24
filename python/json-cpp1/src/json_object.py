@@ -50,6 +50,8 @@ class JsonObject:
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
+        self._force_include = None
+
     def __str__(self):
         """
         Returns a string representation of the JsonObject in JSON format.
@@ -255,6 +257,12 @@ class JsonObject:
         for k in self.get_members():
             yield k
 
+    def force_include(self, member_name: str):
+        if self._force_include:
+            self._force_include.append(member_name)
+        else:
+            self._force_include = [member_name]
+
     def get_members(self):
         """
         Retrieve all member variables of the JsonObject that don't start with an underscore.
@@ -265,8 +273,14 @@ class JsonObject:
         members = []
         v = vars(self)
         for k in v:
-            if not k or k[0] == "_":
+            if not k:
                 continue
+            if k[0] == "_":
+                if self._force_include:
+                    if k not in self._force_include:
+                        continue
+                else:
+                    continue
             members.append(k)
         return members
 
