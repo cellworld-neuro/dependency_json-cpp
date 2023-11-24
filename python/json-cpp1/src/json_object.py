@@ -258,6 +258,19 @@ class JsonObject:
             yield k
 
     def force_include(self, member_name: str):
+        """
+        Adds the specified member name to list of hidden members forced during the serialization.
+
+        This method is used to append a member name to the `_force_include` list attribute of the class.
+        If `_force_include` is already initialized (i.e., not None), the `member_name` is appended to it.
+        If `_force_include` is not initialized (i.e., None), it is first initialized as a list with the `member_name` as its first element.
+
+        Parameters:
+        member_name (str): The name of the member to be added to the `_force_include` list.
+
+        Returns:
+        None: This method does not return any value. It updates the `_force_include` list in place.
+        """
         if self._force_include:
             self._force_include.append(member_name)
         else:
